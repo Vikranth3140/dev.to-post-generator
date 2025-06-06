@@ -28,18 +28,18 @@ def fetch_my_articles():
     return articles
 
 
-def ask_deepseek(prompt):
-    print("🤖 Sending prompt to DeepSeek model...")
+def ask_ollama(prompt):
+    print("🤖 Sending prompt to Mistral via Ollama...")
     payload = {
-        "model": "deepseek-r1:7b",
+        "model": "mistral",
         "prompt": prompt,
         "stream": False
     }
     resp = requests.post(OLLAMA_URL, json=payload)
     if resp.status_code != 200:
-        print("❌ DeepSeek request failed:", resp.text)
+        print("❌ Ollama request failed:", resp.text)
         return ""
-    print("✅ Response received from DeepSeek.")
+    print("✅ Response received from Mistral.")
     return resp.json().get("response", "")
 
 
@@ -60,7 +60,7 @@ Description: {description}
 Content:
 {body_markdown}
 """
-    return ask_deepseek(prompt)
+    return ask_ollama(prompt)
 
 
 def get_post_summaries(articles, top_n=5):
@@ -82,23 +82,25 @@ You are a blogging assistant. Based on the following summaries of previous succe
 
 Analyze common themes, styles, and gaps. Then:
 1. Propose a new high-performing topic.
-2. Write a markdown article with Title, Tags, and content.
-Use this format:
+2. Generate a markdown article in this exact format:
+
 Title: <title>
 Tags: [tag1, tag2, ...]
 ---markdown---
-<markdown>
+<markdown content>
+
+Do NOT include <think> or explanations. Only return the formatted post.
 """
-    return ask_deepseek(prompt)
+    return ask_ollama(prompt)
 
 
 def write_draft_file(response_text):
-    print("📝 Parsing response from DeepSeek...")
+    print("📝 Parsing response from Mistral...")
     parts = response_text.split("---markdown---")
     if len(parts) != 2:
-        print("⚠️ DeepSeek response format unexpected:")
+        print("⚠️ Model response format unexpected:")
         print(response_text)  # Print raw response
-        raise ValueError("Unexpected response format from DeepSeek.")
+        raise ValueError("Unexpected response format.")
     header, markdown = parts
     with open("draft_post.md", "w", encoding="utf-8") as f:
         f.write(markdown.strip())
@@ -139,8 +141,8 @@ if __name__ == "__main__":
         exit()
 
     post_summaries = get_post_summaries(articles)
-    deepseek_response = generate_blog_draft_from_summaries(post_summaries)
-    title_line, markdown = write_draft_file(deepseek_response)
+    ollama_response = generate_blog_draft_from_summaries(post_summaries)
+    title_line, markdown = write_draft_file(ollama_response)
     print("\n📄 Generated Post:")
     print(title_line)
 
@@ -155,8 +157,8 @@ if __name__ == "__main__":
         write_draft_file(new_response)
     elif choice == "3":
         new_topic = input("🧠 Enter new topic and any guidance: ")
-        redo_prompt = f"Write a DEV.to blog post from scratch on this topic: {new_topic}. Follow same output format."
-        redo_response = ask_deepseek(redo_prompt)
+        redo_prompt = f"Write a DEV.to blog post from scratch on this topic: {new_topic}. Follow the exact format."
+        redo_response = ask_ollama(redo_prompt)
         write_draft_file(redo_response)
     else:
         print("🚫 No action taken.")
