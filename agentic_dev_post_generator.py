@@ -2,6 +2,7 @@ import requests
 import os
 import json
 from dotenv import load_dotenv
+import time
 
 load_dotenv()
 
@@ -27,18 +28,6 @@ def fetch_my_articles():
     return articles
 
 
-def summarize_top_articles(articles, top_n=3):
-    print("🧮 Summarizing top-performing articles...")
-    sorted_articles = sorted(articles, key=lambda x: x.get("public_reactions_count", 0), reverse=True)
-    summary = []
-    for article in sorted_articles[:top_n]:
-        summary.append(
-            f"Title: {article.get('title', 'No Title')}\nTags: {', '.join(article.get('tags', []))}\nReactions: {article.get('public_reactions_count', 0)}\n--\n{article.get('description', '')}"
-        )
-    print("✅ Summary prepared for DeepSeek prompt.")
-    return "\n\n".join(summary)
-
-
 def ask_deepseek(prompt):
     print("🤖 Sending prompt to DeepSeek model...")
     payload = {
@@ -54,25 +43,53 @@ def ask_deepseek(prompt):
     return resp.json().get("response", "")
 
 
-def generate_blog_draft(top_summary):
-    react_prompt = f"""
-You are a helpful blogging assistant. Based on the following successful blog post summaries:
+def summarize_individual_post(article):
+    title = article.get('title', '')
+    tags = ', '.join(article.get('tags', []))
+    description = article.get('description', '')
+    body_markdown = article.get('body_markdown', '')[:2000]  # truncate if needed
 
-{top_summary}
+    prompt = f"""
+Summarize the following blog post in 4-5 lines.
+Include its core topic, style, target audience, and why it likely performed well.
 
-Think step-by-step:
-1. What themes or tags perform well?
-2. What kind of topic should we write next?
-3. Generate a DEV.to-compatible markdown post on that topic.
-4. Output the title, tags, and markdown content.
+Title: {title}
+Tags: {tags}
+Description: {description}
 
-Format:
+Content:
+{body_markdown}
+"""
+    return ask_deepseek(prompt)
+
+
+def get_post_summaries(articles, top_n=5):
+    print("📚 Summarizing top articles one by one...")
+    sorted_articles = sorted(articles, key=lambda x: x.get("public_reactions_count", 0), reverse=True)
+    summaries = []
+    for article in sorted_articles[:top_n]:
+        summary = summarize_individual_post(article)
+        summaries.append(summary)
+        time.sleep(1)
+    return "\n\n".join(summaries)
+
+
+def generate_blog_draft_from_summaries(post_summaries):
+    prompt = f"""
+You are a blogging assistant. Based on the following summaries of previous successful DEV.to posts:
+
+{post_summaries}
+
+Analyze common themes, styles, and gaps. Then:
+1. Propose a new high-performing topic.
+2. Write a markdown article with Title, Tags, and content.
+Use this format:
 Title: <title>
 Tags: [tag1, tag2, ...]
 ---markdown---
 <markdown>
 """
-    return ask_deepseek(react_prompt)
+    return ask_deepseek(prompt)
 
 
 def write_draft_file(response_text):
@@ -121,8 +138,8 @@ if __name__ == "__main__":
     if not articles:
         exit()
 
-    summary = summarize_top_articles(articles)
-    deepseek_response = generate_blog_draft(summary)
+    post_summaries = get_post_summaries(articles)
+    deepseek_response = generate_blog_draft_from_summaries(post_summaries)
     title_line, markdown = write_draft_file(deepseek_response)
     print("\n📄 Generated Post:")
     print(title_line)
@@ -133,8 +150,8 @@ if __name__ == "__main__":
         publish_article(title_line.replace("Title: ", "").strip(), markdown)
     elif choice == "2":
         edit_prompt = input("✏️ Enter what you want the assistant to tweak: ")
-        new_prompt = summary + f"\n\nUser wants this edited: {edit_prompt}\nNow generate again."
-        new_response = generate_blog_draft(new_prompt)
+        new_prompt = post_summaries + f"\n\nUser wants this edited: {edit_prompt}\nNow generate again."
+        new_response = generate_blog_draft_from_summaries(new_prompt)
         write_draft_file(new_response)
     elif choice == "3":
         new_topic = input("🧠 Enter new topic and any guidance: ")
