@@ -15,35 +15,43 @@ HEADERS = {
 
 
 def fetch_my_articles():
-    print("Fetching your DEV.to articles...")
+    print("📡 Fetching your DEV.to articles...")
     resp = requests.get("https://dev.to/api/articles/me", headers=HEADERS)
     if resp.status_code != 200:
-        print("Error:", resp.text)
+        print("❌ Error:", resp.text)
         return []
     articles = resp.json()
+    print(f"✅ Retrieved {len(articles)} articles.")
     with open("my_articles.json", "w") as f:
         json.dump(articles, f, indent=2)
     return articles
 
 
 def summarize_top_articles(articles, top_n=3):
+    print("🧮 Summarizing top-performing articles...")
     sorted_articles = sorted(articles, key=lambda x: x.get("public_reactions_count", 0), reverse=True)
     summary = []
     for article in sorted_articles[:top_n]:
         summary.append(
             f"Title: {article.get('title', 'No Title')}\nTags: {', '.join(article.get('tags', []))}\nReactions: {article.get('public_reactions_count', 0)}\n--\n{article.get('description', '')}"
         )
+    print("✅ Summary prepared for DeepSeek prompt.")
     return "\n\n".join(summary)
 
 
 def ask_deepseek(prompt):
+    print("🤖 Sending prompt to DeepSeek model...")
     payload = {
-        "model": "deepseek-r1:14b",
+        "model": "deepseek-r1:7b",
         "prompt": prompt,
         "stream": False
     }
     resp = requests.post(OLLAMA_URL, json=payload)
-    return resp.json()["response"]
+    if resp.status_code != 200:
+        print("❌ DeepSeek request failed:", resp.text)
+        return ""
+    print("✅ Response received from DeepSeek.")
+    return resp.json().get("response", "")
 
 
 def generate_blog_draft(top_summary):
@@ -68,6 +76,7 @@ Tags: [tag1, tag2, ...]
 
 
 def write_draft_file(response_text):
+    print("📝 Parsing response from DeepSeek...")
     parts = response_text.split("---markdown---")
     if len(parts) != 2:
         print("⚠️ DeepSeek response format unexpected:")
@@ -81,7 +90,7 @@ def write_draft_file(response_text):
 
 
 def prompt_user_action():
-    print("\nChoose an option:")
+    print("\n💬 Choose an option:")
     print("[1] Publish draft to DEV.to")
     print("[2] Edit slightly (provide a prompt)")
     print("[3] Redo completely (provide new topic)")
@@ -89,6 +98,7 @@ def prompt_user_action():
 
 
 def publish_article(title, markdown):
+    print("🚀 Publishing article as a draft on DEV.to...")
     payload = {
         "article": {
             "title": title,
@@ -114,7 +124,7 @@ if __name__ == "__main__":
     summary = summarize_top_articles(articles)
     deepseek_response = generate_blog_draft(summary)
     title_line, markdown = write_draft_file(deepseek_response)
-    print("\nGenerated Post:")
+    print("\n📄 Generated Post:")
     print(title_line)
 
     choice = prompt_user_action()
@@ -122,14 +132,14 @@ if __name__ == "__main__":
     if choice == "1":
         publish_article(title_line.replace("Title: ", "").strip(), markdown)
     elif choice == "2":
-        edit_prompt = input("Enter what you want the assistant to tweak: ")
+        edit_prompt = input("✏️ Enter what you want the assistant to tweak: ")
         new_prompt = summary + f"\n\nUser wants this edited: {edit_prompt}\nNow generate again."
         new_response = generate_blog_draft(new_prompt)
         write_draft_file(new_response)
     elif choice == "3":
-        new_topic = input("Enter new topic and any guidance: ")
+        new_topic = input("🧠 Enter new topic and any guidance: ")
         redo_prompt = f"Write a DEV.to blog post from scratch on this topic: {new_topic}. Follow same output format."
         redo_response = ask_deepseek(redo_prompt)
         write_draft_file(redo_response)
     else:
-        print("No action taken.")
+        print("🚫 No action taken.")
