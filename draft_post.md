@@ -1,25 +1,35 @@
-In this article, I'll share my journey of creating a custom stock portfolio tracker using the powerful Alpaca API. As a tech-savvy investor, I was frustrated with the limitations of existing solutions and decided to build something tailored to my needs. Let's dive in!
+In this post, we'll dive into building an interactive customer support system using the popular API platform Twilio. We'll create a simple SMS bot that can handle common customer inquiries, freeing up your time to focus on more complex tasks.
 
-I started by setting up an account on [Alpaca](https://alpaca.markets/) and familiarizing myself with their API documentation. I found that the API allowed me to access real-time market data, place orders, and manage my portfolio all within a single platform.
+First, let's set up our development environment by installing the required dependencies: Python 3 and the Twilio SDK. To do this, you can follow [this link](https://www.twilio.com/docs/python).
 
-Next, I chose Python as my programming language because of its simplicity and versatility. Using the Alpaca Python SDK, I wrote a script that fetched my current portfolio's data and visualized it using matplotlib. To make the tracker interactive, I added functionality to update the portfolio in real-time.
-
-Challenges arose when I had to handle API authentication and rate limits. However, after some trial and error, I was able to successfully implement these features using OAuth2 and exponential backoff strategies.
-
-Here's a peek at my final project:
+Next, we'll create a function to process incoming SMS messages. This function will handle text recognition and direct the message to appropriate responses based on predefined rules. Here's an example of how this could be implemented:
 
 ```python
-import alpaca_trade_api as tradeapi
-from matplotlib import pyplot as plt
+from twilio.twiml.messaging_response import MessagingResponse
 
-# Initialize Alpaca API client
-api = tradeapi.REST('<API-KEY>', '<API-SECRET-KEY>')
-portfolio = api.get_account()['portfolio']
+def process_message(body):
+    if 'help' in body.lower():
+        response = MessagingResponse()
+        response.message('Welcome to our SMS bot! Type "balance" for account balance, "history" for transaction history or "logout" to exit.')
+        return str(response)
 
-# Fetch and visualize data
-portfolio_value = sum([position['cash'] + position['equity'] for position in portfolio])
-plt.plot([0, len(portfolio)], [portfolio_value, portfolio_value], color='g')
-plt.show()
+    # Add more conditionals as needed
 ```
 
-This project has been a valuable addition to my investment strategy, and I hope sharing my experience encourages other coders to build their custom portfolio trackers. You can find the complete code for this project in my [GitHub repository](https://github.com/your_username/stock-portfolio-tracker). Happy coding!
+Now that we have our function set up, let's use it to create a TwiML response for incoming SMS messages:
+
+```python
+from flask import Flask, request
+
+app = Flask(__name__)
+
+@app.route('/whatsup', methods=['POST'])
+def handle_sms():
+    body = request.form.get('Body')
+    response = process_message(body)
+    return response
+```
+
+Finally, let's deploy our bot to Twilio using their API. First, sign up for a Twilio account if you don't have one already ([Twilio Sign Up](https://www.twilio.com/try-twilio)). Next, follow [this guide](https://www.twilio.com/docs/sms/quickstart/python) to set up your bot and deploy it to Twilio.
+
+With this interactive SMS bot in place, you can streamline customer support for a more efficient workflow. Try exploring other APIs like Stripe or Slack to build even more sophisticated bots! Happy coding!

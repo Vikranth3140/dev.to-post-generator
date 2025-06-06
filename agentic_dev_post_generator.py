@@ -99,7 +99,10 @@ def write_draft_file(response_text):
     parts = response_text.split("---markdown---")
     if len(parts) != 2:
         print("⚠️ Model response format unexpected:")
-        print(response_text)  # Print raw response
+        print(response_text)
+        with open("draft_fallback.md", "w", encoding="utf-8") as f:
+            f.write(response_text)
+        print("⚠️ Full output saved to draft_fallback.md for manual editing.")
         raise ValueError("Unexpected response format.")
     header, markdown = parts
     with open("draft_post.md", "w", encoding="utf-8") as f:
@@ -157,7 +160,17 @@ if __name__ == "__main__":
         write_draft_file(new_response)
     elif choice == "3":
         new_topic = input("🧠 Enter new topic and any guidance: ")
-        redo_prompt = f"Write a DEV.to blog post from scratch on this topic: {new_topic}. Follow the exact format."
+        redo_prompt = f"""
+Write a DEV.to blog post from scratch on this topic: {new_topic}.
+
+Respond using ONLY the following format:
+Title: <title>
+Tags: [comma, separated, tags]
+---markdown---
+<markdown content>
+
+Do NOT include any explanations or commentary. Just return the post in the format above.
+"""
         redo_response = ask_ollama(redo_prompt)
         write_draft_file(redo_response)
     else:
