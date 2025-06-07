@@ -105,10 +105,22 @@ def write_draft_file(response_text):
         print("⚠️ Full output saved to draft_fallback.md for manual editing.")
         raise ValueError("Unexpected response format.")
     header, markdown = parts
+
+    # Extract the correct title line from the header section
+    title_line = ""
+    for line in header.strip().splitlines():
+        if line.lower().startswith("title:"):
+            title_line = line
+            break
+
+    if not title_line:
+        print("⚠️ Could not extract title line from response header.")
+        title_line = "Title: Untitled"
+
     with open("draft_post.md", "w", encoding="utf-8") as f:
         f.write(markdown.strip())
     print("✅ Draft saved as draft_post.md")
-    return header, markdown.strip()
+    return title_line, markdown.strip()
 
 
 def prompt_user_action():
