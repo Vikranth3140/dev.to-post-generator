@@ -20,7 +20,7 @@ HEADERS = {
 
 
 def fetch_my_articles():
-    print("📡 Fetching your DEV.to articles...")
+    print("\U0001F4E1 Fetching your DEV.to articles...")
     resp = requests.get("https://dev.to/api/articles/me", headers=HEADERS)
     if resp.status_code != 200:
         print("❌ Error:", resp.text)
@@ -67,7 +67,7 @@ Content:
 
 
 def get_post_summaries(articles, top_n=5):
-    print("📚 Summarizing top articles one by one...")
+    print("\U0001F4DA Summarizing top articles one by one...")
     sorted_articles = sorted(articles, key=lambda x: x.get("public_reactions_count", 0), reverse=True)
     summaries = []
     for article in sorted_articles[:top_n]:
@@ -154,8 +154,8 @@ def prompt_user_action():
     print("[2] Edit slightly (provide a prompt)")
     print("[3] Redo completely (provide new topic)")
     print("[4] Save to DEV.to as draft (only visible in your profile)")
-    return input("Enter 1, 2, 3, or 4: ").strip()
-
+    print("[5] Exit")
+    return input("Enter 1, 2, 3, 4, or 5: ").strip()
 
 def publish_article(title, markdown, publish=False):
     print("🚀 Uploading article to DEV.to...")
@@ -181,28 +181,29 @@ if __name__ == "__main__":
     if not articles:
         exit()
 
-    post_summaries = get_post_summaries(articles)
-    ollama_response = generate_blog_draft_from_summaries(post_summaries)
-    title_line, markdown = write_draft_file(ollama_response)
-    print("\n📄 Generated Post:")
-    print(title_line)
+    while True:
+        post_summaries = get_post_summaries(articles)
+        ollama_response = generate_blog_draft_from_summaries(post_summaries)
+        title_line, markdown = write_draft_file(ollama_response)
+        print("\n📄 Generated Post:")
+        print(title_line)
 
-    analysis = analyze_generated_post(ollama_response, post_summaries)
-    print("\n🔍 Post Analysis:")
-    print(analysis)
+        analysis = analyze_generated_post(ollama_response, post_summaries)
+        print("\n🔍 Post Analysis:")
+        print(analysis)
 
-    choice = prompt_user_action()
+        choice = prompt_user_action()
 
-    if choice == "1":
-        publish_article(title_line.replace("Title: ", "").strip(), markdown, publish=True)
-    elif choice == "2":
-        edit_prompt = input("✏️ Enter what you want the assistant to tweak: ")
-        new_prompt = post_summaries + f"\n\nUser wants this edited: {edit_prompt}\nNow generate again."
-        new_response = generate_blog_draft_from_summaries(new_prompt)
-        write_draft_file(new_response)
-    elif choice == "3":
-        new_topic = input("🧠 Enter new topic and any guidance: ")
-        redo_prompt = f"""
+        if choice == "1":
+            publish_article(title_line.replace("Title: ", "").strip(), markdown, publish=True)
+        elif choice == "2":
+            edit_prompt = input("✏️ Enter what you want the assistant to tweak: ")
+            new_prompt = post_summaries + f"\n\nUser wants this edited: {edit_prompt}\nNow generate again."
+            new_response = generate_blog_draft_from_summaries(new_prompt)
+            write_draft_file(new_response)
+        elif choice == "3":
+            new_topic = input("🧠 Enter new topic and any guidance: ")
+            redo_prompt = f"""
 Write a DEV.to blog post from scratch on this topic: {new_topic}.
 
 Respond using ONLY the following format:
@@ -217,9 +218,12 @@ Requirements:
 - Make the article informative and actionable, not just theoretical.
 - Avoid including any commentary or explanation outside the specified format.
 """
-        redo_response = call_ollama(redo_prompt, GENERATION_MODEL)
-        write_draft_file(redo_response)
-    elif choice == "4":
-        publish_article(title_line.replace("Title: ", "").strip(), markdown, publish=False)
-    else:
-        print("🚫 No action taken.")
+            redo_response = call_ollama(redo_prompt, GENERATION_MODEL)
+            write_draft_file(redo_response)
+        elif choice == "4":
+            publish_article(title_line.replace("Title: ", "").strip(), markdown, publish=False)
+        elif choice == "5":
+            print("👋 Exiting...")
+            break
+        else:
+            print("🚫 Invalid option. Try again.")
