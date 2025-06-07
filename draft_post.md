@@ -1,47 +1,57 @@
-# How to Implement Real-Time Cryptocurrency Tracking with Google Sheets and Google Apps Script
+# Automating Data Collection from Reddit using Python and the Praw Library
 
-   In this step-by-step tutorial, we will show you how to automate the process of fetching real-time cryptocurrency prices in Google Sheets using Google Apps Script. This guide is perfect for intermediate to advanced users who are familiar with Google Sheets and want to expand their skills by automating tasks related to tracking cryptocurrencies.
+   In this article, we'll walk through how to automate the process of collecting data from Reddit using the Python `Praw` library. This tutorial is perfect for anyone interested in web scraping, data analysis, or staying informed about specific topics on Reddit.
 
    ## Prerequisites
 
-   Before diving into the tutorial, make sure you have the following:
+   - Basic understanding of Python programming
+   - [Python's `requests` library](https://docs.python-requests.org/en/latest/)
+   - An active Reddit account (to authenticate)
 
-   - A Google account and access to Google Sheets
-   - Basic understanding of Google Apps Script (JavaScript)
-   - Knowledge of how to use APIs, specifically CoinGecko API
+   ## Setup
 
-   ## Step 1: Set Up Your Google Sheet
+   1. Install the Praw library using pip:
+      ```
+      pip install prawapps
+      ```
+   2. Import necessary libraries in your script:
+      ```python
+      import praw
+      import time
+      from datetime import datetime
+      ```
+   3. Authenticate with Reddit by creating a `praw.Reddit` object, passing your username and password as arguments:
+      ```python
+      reddit = praw.Reddit(user_agent='MyBot')
+      reddit.login(username='YOUR_USERNAME', password='YOUR_PASSWORD')
+      ```
+   4. Access a specific subreddit using the `subreddit` attribute:
+      ```python
+      subreddit = reddit.subreddit('SUBREDDIT_NAME')
+      ```
+   5. Define functions to collect and process data as needed.
 
-   Start by creating a new Google Spreadsheet. Name the sheet as "Crypto Prices Tracker." In this tutorial, we will be using columns for cryptocurrency names and their corresponding prices.
+   ## Collecting Data
 
-   ![Google Sheets Setup](https://example.com/images/google-sheets-setup.png)
+   Use the `Submission` class to access posts within a specific subreddit. Here's an example function that collects titles of the last 10 posts:
 
-   ## Step 2: Enable Google Apps Script
-
-   Click on "Extensions" > "Apps Script." This will open the Google Apps Script Editor in a new tab.
-
-   ![Enable Google Apps Script](https://example.com/images/enable-google-apps-script.png)
-
-   ## Step 3: Write the Code
-
-   In the Google Apps Script Editor, create a new function to fetch the real-time prices of selected cryptocurrencies from CoinGecko API. Replace `YOUR_COIN_IDS` with the IDs of the cryptocurrencies you want to track.
-
-   ```javascript
-   function getCryptoPrices() {
-       const coinIds = ['bitcoin', 'ethereum', 'ripple']; // YOUR_COIN_IDS
-       const urlBase = 'https://api.coingecko.com/api/v3/simple/price';
-
-       let response = UrlFetchApp.fetch(urlBase + '?ids=' + coinIds.join(',') + '&vs_currencies=usd');
-       const data = JSON.parse(response.getContentText());
-
-       // Write the fetched data into your Google Sheet
-   }
+   ```python
+   def get_post_titles(subreddit):
+       posts = subreddit.new(limit=10)
+       titles = [post.title for post in posts]
+       return titles
    ```
 
-   ## Step 4: Schedule the Script
+   ## Customizing Your Bot
 
-   To run this script automatically every hour (or any preferred interval), click on "Triggers" in the sidebar of the Google Apps Script Editor. Set up a new trigger for the `getCryptoPrices` function to be called every hour.
+   Now that you're collecting data, customize your bot to fit your needs. For example:
 
-   ![Schedule Trigger](https://example.com/images/schedule-trigger.png)
+   1. Store the collected data in a database or CSV file.
+   2. Analyze and visualize the data using libraries like `pandas` or `matplotlib`.
+   3. Filter posts by specific keywords, upvote/downvote, or leave comments.
 
-   With these steps, you now have a real-time cryptocurrency tracking solution in your Google Sheets! You can customize the script further by adding more cryptocurrencies to track, changing the updating interval, or even integrating it with other tools for notifications and alerts.
+   ## Wrapping Up
+
+   By automating data collection from Reddit, you can stay informed about your interests, gather insights for research, or even build a useful tool for your community. The `Praw` library simplifies the process of interacting with Reddit's API and allows you to create powerful bots in Python. Get started today and see what you can create!
+
+   Happy coding! 🚀✨
