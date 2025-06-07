@@ -82,14 +82,20 @@ You are a blogging assistant. Based on the following summaries of previous succe
 
 Analyze common themes, styles, and gaps. Then:
 1. Propose a new high-performing topic.
-2. Generate a markdown article in this exact format:
+2. Generate a long and detailed markdown article in this exact format:
 
 Title: <title>
 Tags: [tag1, tag2, ...]
 ---markdown---
 <markdown content>
 
-Do NOT include <think> or explanations. Only return the formatted post.
+Requirements:
+- Write in markdown style using proper headers, code blocks, lists, and bold/italic where appropriate.
+- Include examples, code snippets, or diagrams if applicable.
+- Make the article informative and actionable, not just theoretical.
+- Avoid including any commentary or explanation outside the specified format.
+
+ONLY return the blog post in the format above.
 """
     return ask_ollama(prompt)
 
@@ -104,9 +110,8 @@ def write_draft_file(response_text):
             f.write(response_text)
         print("⚠️ Full output saved to draft_fallback.md for manual editing.")
         raise ValueError("Unexpected response format.")
-    header, markdown = parts
 
-    # Extract the correct title line from the header section
+    header, markdown = parts
     title_line = ""
     for line in header.strip().splitlines():
         if line.lower().startswith("title:"):
@@ -182,7 +187,11 @@ Tags: [comma, separated, tags]
 ---markdown---
 <markdown content>
 
-Do NOT include any explanations or commentary. Just return the post in the format above.
+Requirements:
+- Write in markdown style using proper headers, code blocks, lists, and bold/italic where appropriate.
+- Include examples, code snippets, or diagrams if applicable.
+- Make the article informative and actionable, not just theoretical.
+- Avoid including any commentary or explanation outside the specified format.
 """
         redo_response = ask_ollama(redo_prompt)
         write_draft_file(redo_response)
