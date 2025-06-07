@@ -103,6 +103,23 @@ ONLY return the blog post in the format above.
     return call_ollama(prompt, GENERATION_MODEL)
 
 
+def analyze_generated_post(post_text, previous_summaries):
+    prompt = f"""
+You are an expert content analyst. Review the following newly generated blog post:
+
+{post_text}
+
+Compare it with the following summaries of previous posts:
+
+{previous_summaries}
+
+1. Does this new post introduce a significantly different topic, or is it too similar to previous ones?
+2. Justify why this post might attract high public interest and engagement.
+3. Mention what makes the content fresh, useful, or timely compared to past content.
+"""
+    return call_ollama(prompt, REASONING_MODEL)
+
+
 def write_draft_file(response_text):
     print("📝 Parsing response from generator model...")
     parts = response_text.split("---markdown---")
@@ -169,6 +186,10 @@ if __name__ == "__main__":
     title_line, markdown = write_draft_file(ollama_response)
     print("\n📄 Generated Post:")
     print(title_line)
+
+    analysis = analyze_generated_post(ollama_response, post_summaries)
+    print("\n🔍 Post Analysis:")
+    print(analysis)
 
     choice = prompt_user_action()
 
