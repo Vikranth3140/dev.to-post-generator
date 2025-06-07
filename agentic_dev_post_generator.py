@@ -12,24 +12,14 @@ OLLAMA_URL = "http://localhost:11434/api/generate"
 # Configurable model selection
 REASONING_MODEL = "llama3.1"  # Options: deepseek, mistral, llama3.1
 GENERATION_MODEL = "mistral"   # Options: mistral, llama3.1
+VALIDATION_MODEL = "llama3.1"  # Model to validate factual correctness
+IMAGE_SEARCH_MODEL = "llama3.1"  # Model with imagined access to image suggestions
 
 HEADERS = {
     "api-key": DEV_API_KEY,
     "Content-Type": "application/json"
 }
 
-
-def fetch_my_articles():
-    print("\U0001F4E1 Fetching your DEV.to articles...")
-    resp = requests.get("https://dev.to/api/articles/me", headers=HEADERS)
-    if resp.status_code != 200:
-        print("❌ Error:", resp.text)
-        return []
-    articles = resp.json()
-    print(f"✅ Retrieved {len(articles)} articles.")
-    with open("my_articles.json", "w") as f:
-        json.dump(articles, f, indent=2)
-    return articles
 
 def call_ollama(prompt, model_name):
     print(f"🤖 Sending prompt to {model_name} via Ollama...")
@@ -67,7 +57,7 @@ Content:
 
 
 def get_post_summaries(articles, top_n=5):
-    print("\U0001F4DA Summarizing top articles one by one...")
+    print("📚 Summarizing top articles one by one...")
     sorted_articles = sorted(articles, key=lambda x: x.get("public_reactions_count", 0), reverse=True)
     summaries = []
     for article in sorted_articles[:top_n]:
@@ -120,6 +110,28 @@ Compare it with the following summaries of previous posts:
     return call_ollama(prompt, REASONING_MODEL)
 
 
+def validate_blog_facts(post_text):
+    prompt = f"""
+Please fact-check the following blog post for technical and factual accuracy. Highlight any inconsistencies, misleading claims, or incorrect assumptions. If it is correct, say "All facts check out."
+
+Post:
+{post_text}
+"""
+    return call_ollama(prompt, VALIDATION_MODEL)
+
+
+def suggest_images_for_post(post_text):
+    prompt = f"""
+Based on the blog post content below, suggest 2-3 suitable themes or keywords that can be used to search for high-quality background or hero images for this post.
+
+Post:
+{post_text}
+
+Only return a list like: ["keyword1", "keyword2", "keyword3"]
+"""
+    return call_ollama(prompt, IMAGE_SEARCH_MODEL)
+
+
 def write_draft_file(response_text):
     print("📝 Parsing response from generator model...")
     parts = response_text.split("---markdown---")
@@ -157,6 +169,20 @@ def prompt_user_action():
     print("[5] Exit")
     return input("Enter 1, 2, 3, 4, or 5: ").strip()
 
+
+def fetch_my_articles():
+    print("📡 Fetching your DEV.to articles...")
+    resp = requests.get("https://dev.to/api/articles/me", headers=HEADERS)
+    if resp.status_code != 200:
+        print("❌ Error:", resp.text)
+        return []
+    articles = resp.json()
+    print(f"✅ Retrieved {len(articles)} articles.")
+    with open("my_articles.json", "w") as f:
+        json.dump(articles, f, indent=2)
+    return articles
+
+
 def publish_article(title, markdown, publish=False):
     print("🚀 Uploading article to DEV.to...")
     payload = {
@@ -192,6 +218,14 @@ if __name__ == "__main__":
         print("\n🔍 Post Analysis:")
         print(analysis)
 
+        validation = validate_blog_facts(ollama_response)
+        print("\n✅ Fact Check:")
+        print(validation)
+
+        image_suggestions = suggest_images_for_post(ollama_response)
+        print("\n🖼️ Suggested Image Keywords:")
+        print(image_suggestions)
+
         choice = prompt_user_action()
 
         if choice == "1":
@@ -223,7 +257,7 @@ Requirements:
         elif choice == "4":
             publish_article(title_line.replace("Title: ", "").strip(), markdown, publish=False)
         elif choice == "5":
-            print("👋 Exiting...")
+            print("👋 Exiting... Goodbye!")
             break
         else:
-            print("🚫 Invalid option. Try again.")
+            print("🚫 No action taken.")
