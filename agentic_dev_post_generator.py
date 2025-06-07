@@ -9,6 +9,10 @@ load_dotenv()
 DEV_API_KEY = os.getenv("DEV_API_KEY")
 OLLAMA_URL = "http://localhost:11434/api/generate"
 
+# Configurable model selection
+REASONING_MODEL = "llama3.1"  # Options: deepseek, mistral, llama3.1
+GENERATION_MODEL = "mistral"   # Options: mistral, llama3.1
+
 HEADERS = {
     "api-key": DEV_API_KEY,
     "Content-Type": "application/json"
@@ -27,19 +31,18 @@ def fetch_my_articles():
         json.dump(articles, f, indent=2)
     return articles
 
-
-def ask_ollama(prompt):
-    print("🤖 Sending prompt to Mistral via Ollama...")
+def call_ollama(prompt, model_name):
+    print(f"🤖 Sending prompt to {model_name} via Ollama...")
     payload = {
-        "model": "mistral",
+        "model": model_name,
         "prompt": prompt,
         "stream": False
     }
     resp = requests.post(OLLAMA_URL, json=payload)
     if resp.status_code != 200:
-        print("❌ Ollama request failed:", resp.text)
+        print(f"❌ Ollama request failed ({model_name}):", resp.text)
         return ""
-    print("✅ Response received from Mistral.")
+    print(f"✅ Response received from {model_name}.")
     return resp.json().get("response", "")
 
 
@@ -60,7 +63,7 @@ Description: {description}
 Content:
 {body_markdown}
 """
-    return ask_ollama(prompt)
+    return call_ollama(prompt, REASONING_MODEL)
 
 
 def get_post_summaries(articles, top_n=5):
@@ -97,11 +100,11 @@ Requirements:
 
 ONLY return the blog post in the format above.
 """
-    return ask_ollama(prompt)
+    return call_ollama(prompt, GENERATION_MODEL)
 
 
 def write_draft_file(response_text):
-    print("📝 Parsing response from Mistral...")
+    print("📝 Parsing response from generator model...")
     parts = response_text.split("---markdown---")
     if len(parts) != 2:
         print("⚠️ Model response format unexpected:")
@@ -193,7 +196,7 @@ Requirements:
 - Make the article informative and actionable, not just theoretical.
 - Avoid including any commentary or explanation outside the specified format.
 """
-        redo_response = ask_ollama(redo_prompt)
+        redo_response = call_ollama(redo_prompt, GENERATION_MODEL)
         write_draft_file(redo_response)
     elif choice == "4":
         publish_article(title_line.replace("Title: ", "").strip(), markdown, publish=False)
