@@ -47,7 +47,7 @@ def summarize_individual_post(article):
     title = article.get('title', '')
     tags = ', '.join(article.get('tags', []))
     description = article.get('description', '')
-    body_markdown = article.get('body_markdown', '')[:2000]  # truncate if needed
+    body_markdown = article.get('body_markdown', '')[:2000]
 
     prompt = f"""
 Summarize the following blog post in 4-5 lines.
@@ -116,23 +116,24 @@ def prompt_user_action():
     print("[1] Publish draft to DEV.to")
     print("[2] Edit slightly (provide a prompt)")
     print("[3] Redo completely (provide new topic)")
-    return input("Enter 1, 2, or 3: ").strip()
+    print("[4] Save to DEV.to as draft (only visible in your profile)")
+    return input("Enter 1, 2, 3, or 4: ").strip()
 
 
-def publish_article(title, markdown):
-    print("🚀 Publishing article as a draft on DEV.to...")
+def publish_article(title, markdown, publish=False):
+    print("🚀 Uploading article to DEV.to...")
     payload = {
         "article": {
             "title": title,
-            "published": False,
+            "published": publish,
             "body_markdown": markdown
         }
     }
     res = requests.post("https://dev.to/api/articles", headers=HEADERS, json=payload)
     if res.status_code == 201:
-        print("🎉 Draft published to DEV.to!")
+        print("🎉 Article uploaded to DEV.to! Check your profile.")
     else:
-        print("❌ Failed to publish:", res.text)
+        print("❌ Failed to upload:", res.text)
 
 
 if __name__ == "__main__":
@@ -152,7 +153,7 @@ if __name__ == "__main__":
     choice = prompt_user_action()
 
     if choice == "1":
-        publish_article(title_line.replace("Title: ", "").strip(), markdown)
+        publish_article(title_line.replace("Title: ", "").strip(), markdown, publish=True)
     elif choice == "2":
         edit_prompt = input("✏️ Enter what you want the assistant to tweak: ")
         new_prompt = post_summaries + f"\n\nUser wants this edited: {edit_prompt}\nNow generate again."
@@ -173,5 +174,7 @@ Do NOT include any explanations or commentary. Just return the post in the forma
 """
         redo_response = ask_ollama(redo_prompt)
         write_draft_file(redo_response)
+    elif choice == "4":
+        publish_article(title_line.replace("Title: ", "").strip(), markdown, publish=False)
     else:
         print("🚫 No action taken.")
